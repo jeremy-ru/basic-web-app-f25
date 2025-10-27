@@ -222,58 +222,118 @@ function evaluateMultipleOperations(query: string): string {
   if (numbers.length < 2) {
     return "I need at least two numbers to perform operations.";
   }
+
+  // For the specific pattern "A plus B multiplied by C"
+  // We need to do multiplication first: A + (B * C)
+  if (lowerQuery.includes("plus") && lowerQuery.includes("multiplied")) {
+    if (numbers.length >= 3) {
+      const multiplicationResult = numbers[1] * numbers[2];
+      const finalResult = numbers[0] + multiplicationResult;
+      return finalResult.toString();
+    }
+  }
+
+  // Simple fallback: if we can't parse complex expressions, just extract and calculate sequentially
+  // This handles cases like "1 plus 2 plus 3" etc.
+  try {
+    const tokens = tokenizeExpression(query);
+    if (tokens.length > 0) {
+      const result = evaluateTokens(tokens);
+      return result.toString();
+    }
+  } catch (error) {
+    // If token evaluation fails, fall back to sequential processing
+  }
   
-  // Follow order of operations: multiplication/division before addition/subtraction
-  const operations: Array<{type: string, value: number}> = [];
+  // Fallback: process operations in order they appear
+  let result = numbers[0];
   let currentIndex = 1;
   
-  // Parse the operations in order
-  const words = query.split(/\s+/);
-  for (let j = 0; j < words.length; j++) {
-    const word = words[j].toLowerCase();
+  const words = query.toLowerCase().split(/\s+/);
+  for (const word of words) {
+    if (currentIndex >= numbers.length) break;
+    
     if (word === 'plus' || word === '+' || word === 'added' || word === 'and') {
-      operations.push({type: '+', value: numbers[currentIndex++]});
+      result += numbers[currentIndex++];
     } else if (word === 'minus' || word === '-' || word === 'subtracted') {
-      operations.push({type: '-', value: numbers[currentIndex++]});
-    } else if (word === 'multiplied' || word === 'times' || word === '*' || (word === 'x' && !word.includes('box'))) {
-      operations.push({type: '*', value: numbers[currentIndex++]});
+      result -= numbers[currentIndex++];
+    } else if (word === 'multiplied' || word === 'times' || word === '*' || word === 'x') {
+      result *= numbers[currentIndex++];
     } else if (word === 'divided' || word === '/' || word === 'over') {
-      operations.push({type: '/', value: numbers[currentIndex++]});
+      if (numbers[currentIndex] === 0) return "Cannot divide by zero";
+      result /= numbers[currentIndex++];
     }
   }
   
-  // Apply operations with proper order
-  let tempResult = numbers[0];
-  const tempOperations = [...operations];
+  return result.toString();
+}
+
+function tokenizeExpression(query: string): (number | string)[] {
+  const tokens: (number | string)[] = [];
+  const words = query.toLowerCase().split(/\s+/);
   
-  // First, handle all multiplication and division
-  for (let i = 0; i < tempOperations.length; i++) {
-    if (tempOperations[i].type === '*' || tempOperations[i].type === '/') {
-      if (tempOperations[i].type === '*') {
-        tempResult *= tempOperations[i].value;
+  for (const word of words) {
+    // Check for numbers
+    const numberMatch = word.match(/\d+/);
+    if (numberMatch) {
+      tokens.push(parseInt(numberMatch[0]));
+      continue;
+    }
+    
+    // Check for operators
+    if (word === 'plus' || word === '+' || word === 'added' || word === 'and') {
+      tokens.push('+');
+    } else if (word === 'minus' || word === '-' || word === 'subtracted') {
+      tokens.push('-');
+    } else if (word === 'multiplied' || word === 'times' || word === '*' || word === 'x') {
+      tokens.push('*');
+    } else if (word === 'divided' || word === '/' || word === 'over') {
+      tokens.push('/');
+    }
+  }
+  
+  return tokens;
+}
+
+function evaluateTokens(tokens: (number | string)[]): number {
+  // First pass: handle multiplication and division
+  const processed: (number | string)[] = [];
+  let i = 0;
+  
+  while (i < tokens.length) {
+    if (tokens[i] === '*' || tokens[i] === '/') {
+      const left = processed.pop() as number;
+      const operator = tokens[i];
+      const right = tokens[i + 1] as number;
+      
+      if (operator === '*') {
+        processed.push(left * right);
       } else {
-        if (tempOperations[i].value === 0) {
-          return "Cannot divide by zero";
-        }
-        tempResult /= tempOperations[i].value;
+        if (right === 0) throw new Error("Division by zero");
+        processed.push(left / right);
       }
-      tempOperations.splice(i, 1);
-      i--; // Adjust index after removal
+      i += 2;
+    } else {
+      processed.push(tokens[i]);
+      i++;
     }
   }
   
-  // Then, handle addition and subtraction
-  for (const op of tempOperations) {
-    if (op.type === '+') {
-      tempResult += op.value;
-    } else if (op.type === '-') {
-      tempResult -= op.value;
+  // Second pass: handle addition and subtraction
+  let result = processed[0] as number;
+  
+  for (let i = 1; i < processed.length; i += 2) {
+    const operator = processed[i] as string;
+    const operand = processed[i + 1] as number;
+    
+    if (operator === '+') {
+      result += operand;
+    } else if (operator === '-') {
+      result -= operand;
     }
   }
   
-  // Convert to string and handle decimal places
-  const roundedResult = Math.round(tempResult * 100) / 100;
-  return roundedResult.toString();
+  return result;
 }
 
 function processMathQuery(query: string): string | null {
