@@ -35,6 +35,11 @@ export default function QueryProcessor(query: string): string {
     return findPrimes(query);
   }
 
+  // Power/exponent questions
+  if (lowerQuery.includes("power")) {
+    return calculatePower(query);
+  }
+
   // Math problems
   const mathResult = processMathQuery(query);
   if (mathResult !== null) {
@@ -106,6 +111,36 @@ function isPrime(num: number): boolean {
   return true;
 }
 
+function calculatePower(query: string): string {
+  const numbers = extractNumbers(query);
+  
+  if (numbers.length === 2) {
+    const base = numbers[0];
+    const exponent = numbers[1];
+    
+    // For very large numbers, use BigInt to avoid floating point precision issues
+    if (exponent > 100) {
+      try {
+        // Use BigInt for very large exponents to maintain precision
+        let result = BigInt(1);
+        for (let i = 0; i < exponent; i++) {
+          result *= BigInt(base);
+        }
+        return result.toString();
+      } catch (error) {
+        // Fallback to scientific notation for extremely large numbers
+        return (base ** exponent).toExponential();
+      }
+    } else {
+      // For smaller numbers, use regular exponentiation
+      const result = Math.pow(base, exponent);
+      return result.toString();
+    }
+  }
+  
+  return "I need both a base and an exponent to calculate the power.";
+}
+
 function processMathQuery(query: string): string | null {
   const lowerQuery = query.toLowerCase();
   
@@ -140,14 +175,6 @@ function processMathQuery(query: string): string | null {
     const numbers = extractNumbers(query);
     if (numbers.length === 2) {
       return numbers[1] !== 0 ? (numbers[0] / numbers[1]).toString() : "Cannot divide by zero";
-    }
-  }
-
-  // Power/exponent questions
-  if (lowerQuery.includes("power")) {
-    const numbers = extractNumbers(query);
-    if (numbers.length === 2) {
-      return Math.pow(numbers[0], numbers[1]).toString();
     }
   }
 
