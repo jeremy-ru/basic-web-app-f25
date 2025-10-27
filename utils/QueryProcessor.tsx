@@ -40,6 +40,16 @@ export default function QueryProcessor(query: string): string {
     return calculatePower(query);
   }
 
+  // Anagram questions
+  if (lowerQuery.includes("anagram")) {
+    return findAnagram(query);
+  }
+
+  // Multiple operations questions (like addition and multiplication together)
+  if (hasMultipleOperations(query)) {
+    return evaluateMultipleOperations(query);
+  }
+
   // Math problems
   const mathResult = processMathQuery(query);
   if (mathResult !== null) {
@@ -139,6 +149,131 @@ function calculatePower(query: string): string {
   }
   
   return "I need both a base and an exponent to calculate the power.";
+}
+
+function findAnagram(query: string): string {
+  // Extract the target word and candidate words from the query
+  const anagramMatch = query.match(/anagram of (\w+):\s*([\w,\s]+)/i);
+  
+  if (!anagramMatch) {
+    return "I couldn't understand the anagram question.";
+  }
+  
+  const targetWord = anagramMatch[1].toLowerCase();
+  const candidatesString = anagramMatch[2];
+  
+  // Extract candidate words (split by commas and trim)
+  const candidates = candidatesString.split(',').map(word => word.trim().toLowerCase());
+  
+  // Find anagrams
+  const anagrams: string[] = [];
+  
+  for (const candidate of candidates) {
+    if (isAnagram(targetWord, candidate)) {
+      anagrams.push(candidate);
+    }
+  }
+  
+  if (anagrams.length === 0) {
+    return "None of the words are anagrams.";
+  }
+  
+  return anagrams.join(", ");
+}
+
+function isAnagram(word1: string, word2: string): boolean {
+  // Remove any non-alphabetic characters and sort letters
+  const cleanWord1 = word1.replace(/[^a-z]/g, '');
+  const cleanWord2 = word2.replace(/[^a-z]/g, '');
+  
+  // If lengths are different, they can't be anagrams
+  if (cleanWord1.length !== cleanWord2.length) {
+    return false;
+  }
+  
+  // Sort letters and compare
+  const sorted1 = cleanWord1.split('').sort().join('');
+  const sorted2 = cleanWord2.split('').sort().join('');
+  
+  return sorted1 === sorted2;
+}
+
+function hasMultipleOperations(query: string): boolean {
+  const lowerQuery = query.toLowerCase();
+  const operationWords = ['plus', 'minus', 'multiplied', 'divided', 'times'];
+  let operationCount = 0;
+  
+  for (const op of operationWords) {
+    if (lowerQuery.includes(op)) {
+      operationCount++;
+    }
+  }
+  
+  // Also check for multiple symbols
+  const symbolCount = (query.match(/[\+\-\*\/]/g) || []).length;
+  
+  return (operationCount + symbolCount) >= 2;
+}
+
+function evaluateMultipleOperations(query: string): string {
+  const lowerQuery = query.toLowerCase();
+  const numbers = extractNumbers(query);
+  
+  if (numbers.length < 2) {
+    return "I need at least two numbers to perform operations.";
+  }
+  
+  // Follow order of operations: multiplication/division before addition/subtraction
+  const operations: Array<{type: string, value: number}> = [];
+  let currentIndex = 1;
+  
+  // Parse the operations in order
+  const words = query.split(/\s+/);
+  for (let j = 0; j < words.length; j++) {
+    const word = words[j].toLowerCase();
+    if (word === 'plus' || word === '+' || word === 'added' || word === 'and') {
+      operations.push({type: '+', value: numbers[currentIndex++]});
+    } else if (word === 'minus' || word === '-' || word === 'subtracted') {
+      operations.push({type: '-', value: numbers[currentIndex++]});
+    } else if (word === 'multiplied' || word === 'times' || word === '*' || (word === 'x' && !word.includes('box'))) {
+      operations.push({type: '*', value: numbers[currentIndex++]});
+    } else if (word === 'divided' || word === '/' || word === 'over') {
+      operations.push({type: '/', value: numbers[currentIndex++]});
+    }
+  }
+  
+  // Apply operations with proper order
+  let tempResult = numbers[0];
+  const tempOperations = [...operations];
+  
+  // First, handle all multiplication and division
+  for (let i = 0; i < tempOperations.length; i++) {
+    if (tempOperations[i].type === '*' || tempOperations[i].type === '/') {
+      if (tempOperations[i].type === '*') {
+        tempResult *= tempOperations[i].value;
+      } else {
+        if (tempOperations[i].value === 0) {
+          return "Cannot divide by zero";
+        }
+        tempResult /= tempOperations[i].value;
+      }
+      tempOperations.splice(i, 1);
+      i--; // Adjust index after removal
+    }
+  }
+  
+  // Then, handle addition and subtraction
+  for (const op of tempOperations) {
+    if (op.type === '+') {
+      tempResult += op.value;
+    } else if (op.type === '-') {
+      tempResult -= op.value;
+    }
+  }
+  
+  // Convert to string and handle decimal places
+  const roundedResult = Math.round(tempResult * 100) / 100;
+  return roundedResult.toString();
 }
 
 function processMathQuery(query: string): string | null {
