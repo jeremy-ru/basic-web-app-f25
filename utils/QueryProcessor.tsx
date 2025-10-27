@@ -1,5 +1,8 @@
 export default function QueryProcessor(query: string): string {
-  if (query.toLowerCase().includes("shakespeare")) {
+  const lowerQuery = query.toLowerCase();
+
+  // Shakespeare
+  if (lowerQuery.includes("shakespeare")) {
     return (
       "William Shakespeare (26 April 1564 - 23 April 1616) was an " +
       "English poet, playwright, and actor, widely regarded as the greatest " +
@@ -7,20 +10,22 @@ export default function QueryProcessor(query: string): string {
     );
   }
 
-  if (query.toLowerCase().includes("andrewid")) {
+  // Andrew ID
+  if (lowerQuery.includes("andrewid")) {
     return "zru";
   }
 
-  if (query.toLowerCase().includes("name")) {
+  // Name
+  if (lowerQuery.includes("name")) {
     return "Jeremy";
   }
 
-  // Handle "largest" questions
-  if (query.toLowerCase().includes("largest")) {
+  // Largest number questions
+  if (lowerQuery.includes("largest") || lowerQuery.includes("biggest")) {
     return findLargestNumber(query);
   }
 
-  // Handle math problems (your existing code)
+  // Math problems
   const mathResult = processMathQuery(query);
   if (mathResult !== null) {
     return mathResult;
@@ -30,7 +35,6 @@ export default function QueryProcessor(query: string): string {
 }
 
 function findLargestNumber(query: string): string {
-  // Extract all numbers from the query
   const numbers = extractNumbers(query);
   
   if (numbers.length === 0) {
@@ -38,22 +42,87 @@ function findLargestNumber(query: string): string {
   }
   
   if (numbers.length === 1) {
-    return `There's only one number: ${numbers[0]}`;
+    return numbers[0].toString();
   }
   
-  // Find the largest number
   const largest = Math.max(...numbers);
   return largest.toString();
+}
+
+function processMathQuery(query: string): string | null {
+  const lowerQuery = query.toLowerCase();
+  
+  // Addition
+  if (lowerQuery.includes("plus")) {
+    const numbers = extractNumbers(lowerQuery);
+    if (numbers.length === 2) {
+      return (numbers[0] + numbers[1]).toString();
+    }
+  }
+  
+  // Multiplication
+  if (lowerQuery.includes("multiplied")) {
+    const numbers = extractNumbers(lowerQuery);
+    if (numbers.length === 2) {
+      return (numbers[0] * numbers[1]).toString();
+    }
+  }
+  
+  // Subtraction
+  if (lowerQuery.includes("minus")) {
+    const numbers = extractNumbers(lowerQuery);
+    if (numbers.length === 2) {
+      return (numbers[0] - numbers[1]).toString();
+    }
+  }
+  
+  // Division
+  if (lowerQuery.includes("divided")) {
+    const numbers = extractNumbers(lowerQuery);
+    if (numbers.length === 2) {
+      return numbers[1] !== 0 ? (numbers[0] / numbers[1]).toString() : "Cannot divide by zero";
+    }
+  }
+  
+  // Direct arithmetic symbols
+  const directMath = query.match(/(\d+)\s*([\+\-\*\/])\s*(\d+)/);
+  if (directMath) {
+    const num1 = parseInt(directMath[1]);
+    const num2 = parseInt(directMath[3]);
+    const operator = directMath[2];
+    
+    switch (operator) {
+      case '+': return (num1 + num2).toString();
+      case '-': return (num1 - num2).toString();
+      case '*': return (num1 * num2).toString();
+      case '/': return num2 !== 0 ? (num1 / num2).toString() : "Cannot divide by zero";
+    }
+  }
+
+  // Power/exponent questions
+  if (lowerQuery.includes("power")) {
+    const numbers = extractNumbers(lowerQuery);
+    if (numbers.length === 2) {
+      return Math.pow(numbers[0], numbers[1]).toString();
+    }
+  }
+
+  // Square and cube questions
+  if (lowerQuery.includes("square") && lowerQuery.includes("cube")) {
+    const numbers = extractNumbers(lowerQuery);
+    for (const num of numbers) {
+      const sqrt = Math.sqrt(num);
+      const cbrt = Math.cbrt(num);
+      if (Number.isInteger(sqrt) && Number.isInteger(cbrt)) {
+        return num.toString();
+      }
+    }
+  }
+  
+  return null;
 }
 
 function extractNumbers(text: string): number[] {
   const numberMatches = text.match(/\d+/g);
   return numberMatches ? numberMatches.map(Number) : [];
-}
-
-// Your existing math function (keep this)
-function processMathQuery(query: string): string | null {
-  // Your existing math processing logic here
-  // ... (the code from previous examples)
-  return null;
 }
