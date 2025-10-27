@@ -15,5 +15,20 @@ export default function QueryProcessor(query: string): string {
     return "Jeremy";
   }
 
+    // Handle basic arithmetic
+  if (query.includes("+") || query.includes("-") || query.includes("*") || query.includes("/")) {
+    try {
+      // Extract the math expression - looking for patterns like "what is 1+2" or "calculate 3*4"
+      const mathMatch = query.match(/(\d+[\+\-\*\/]\d+)/);
+      if (mathMatch) {
+        const expression = mathMatch[1];
+        const result = eval(expression);
+        return result.toString();
+      }
+    } catch (error) {
+      return "I couldn't calculate that expression.";
+    }
+  }
+
   return "";
 }
