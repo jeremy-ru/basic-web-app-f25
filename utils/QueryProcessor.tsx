@@ -41,10 +41,6 @@ function findLargestNumber(query: string): string {
     return "I couldn't find any numbers in your question.";
   }
   
-  if (numbers.length === 1) {
-    return numbers[0].toString();
-  }
-  
   const largest = Math.max(...numbers);
   return largest.toString();
 }
@@ -52,56 +48,43 @@ function findLargestNumber(query: string): string {
 function processMathQuery(query: string): string | null {
   const lowerQuery = query.toLowerCase();
   
-  // Addition
-  if (lowerQuery.includes("plus")) {
-    const numbers = extractNumbers(lowerQuery);
-    if (numbers.length === 2) {
-      return (numbers[0] + numbers[1]).toString();
+  // Addition - improved pattern matching
+  if (lowerQuery.includes("plus") || query.includes("+")) {
+    const numbers = extractNumbers(query);
+    if (numbers.length >= 2) {
+      const sum = numbers.reduce((a, b) => a + b, 0);
+      return sum.toString();
     }
   }
   
   // Multiplication
-  if (lowerQuery.includes("multiplied")) {
-    const numbers = extractNumbers(lowerQuery);
-    if (numbers.length === 2) {
-      return (numbers[0] * numbers[1]).toString();
+  if (lowerQuery.includes("multiplied") || query.includes("*")) {
+    const numbers = extractNumbers(query);
+    if (numbers.length >= 2) {
+      const product = numbers.reduce((a, b) => a * b, 1);
+      return product.toString();
     }
   }
   
   // Subtraction
-  if (lowerQuery.includes("minus")) {
-    const numbers = extractNumbers(lowerQuery);
+  if (lowerQuery.includes("minus") || query.includes("-")) {
+    const numbers = extractNumbers(query);
     if (numbers.length === 2) {
       return (numbers[0] - numbers[1]).toString();
     }
   }
   
   // Division
-  if (lowerQuery.includes("divided")) {
-    const numbers = extractNumbers(lowerQuery);
+  if (lowerQuery.includes("divided") || query.includes("/")) {
+    const numbers = extractNumbers(query);
     if (numbers.length === 2) {
       return numbers[1] !== 0 ? (numbers[0] / numbers[1]).toString() : "Cannot divide by zero";
-    }
-  }
-  
-  // Direct arithmetic symbols
-  const directMath = query.match(/(\d+)\s*([\+\-\*\/])\s*(\d+)/);
-  if (directMath) {
-    const num1 = parseInt(directMath[1]);
-    const num2 = parseInt(directMath[3]);
-    const operator = directMath[2];
-    
-    switch (operator) {
-      case '+': return (num1 + num2).toString();
-      case '-': return (num1 - num2).toString();
-      case '*': return (num1 * num2).toString();
-      case '/': return num2 !== 0 ? (num1 / num2).toString() : "Cannot divide by zero";
     }
   }
 
   // Power/exponent questions
   if (lowerQuery.includes("power")) {
-    const numbers = extractNumbers(lowerQuery);
+    const numbers = extractNumbers(query);
     if (numbers.length === 2) {
       return Math.pow(numbers[0], numbers[1]).toString();
     }
@@ -109,13 +92,28 @@ function processMathQuery(query: string): string | null {
 
   // Square and cube questions
   if (lowerQuery.includes("square") && lowerQuery.includes("cube")) {
-    const numbers = extractNumbers(lowerQuery);
+    const numbers = extractNumbers(query);
     for (const num of numbers) {
       const sqrt = Math.sqrt(num);
       const cbrt = Math.cbrt(num);
       if (Number.isInteger(sqrt) && Number.isInteger(cbrt)) {
         return num.toString();
       }
+    }
+  }
+
+  // Handle simple arithmetic expressions like "1+2" or "3*4"
+  const simpleMathMatch = query.match(/(\d+)\s*([\+\-\*\/])\s*(\d+)/);
+  if (simpleMathMatch) {
+    const num1 = parseInt(simpleMathMatch[1]);
+    const num2 = parseInt(simpleMathMatch[3]);
+    const operator = simpleMathMatch[2];
+    
+    switch (operator) {
+      case '+': return (num1 + num2).toString();
+      case '-': return (num1 - num2).toString();
+      case '*': return (num1 * num2).toString();
+      case '/': return num2 !== 0 ? (num1 / num2).toString() : "Cannot divide by zero";
     }
   }
   
